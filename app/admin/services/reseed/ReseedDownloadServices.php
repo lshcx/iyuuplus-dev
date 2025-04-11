@@ -223,7 +223,7 @@ class ReseedDownloadServices
             return [];
         }
 
-        echo "读取站点限速配置文件路径: {$filename}" . PHP_EOL;
+        Log::debug('读取站点限速配置文件路径: ' . $filename);
 
         // 读取文件内容
         $jsonData = file_get_contents($filename);
@@ -281,6 +281,8 @@ class ReseedDownloadServices
                                     $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit * 1024);
                                 }
                                 
+                                $bittorrentClients->torrentAddTags($reseed->info_hash, $reseed->site);
+
                                 // 标记标签 2024年4月25日
                                 if (DownloaderMarkerEnums::Tag === $markerEnum) {
                                     $bittorrentClients->torrentAddTags($reseed->info_hash, 'IYUU' . ReseedSubtypeEnums::text($reseed->getSubtypeEnums()));
