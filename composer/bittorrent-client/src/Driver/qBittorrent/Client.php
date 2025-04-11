@@ -767,6 +767,17 @@ class Client extends Clients
         return $rs;
     }
 
+    public function setTorrentUploadSpeed($hash, $speed): false|string|null
+    {
+        return $this->postData('torrent_setUploadLimit', ['hashes' => $hash, 'limit' => $speed]);
+    }
+
+    public function setTorrentDownloadSpeed($hash, $speed): false|string|null
+    {
+        return $this->postData('torrent_setDownloadLimit', ['hashes' => $hash, 'limit' => $speed]);
+    }
+    
+
     public function start()
     {
         // TODO: Implement start() method.

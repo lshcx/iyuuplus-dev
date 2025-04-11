@@ -292,6 +292,25 @@ class Client extends Clients
         return $this->request('torrent-verify', $params);
     }
 
+    public function setTorrentUploadSpeed(string $hash, int $speed): bool|string|null
+    {
+        if (!is_array($hash)) {
+            $hash = [$hash];
+        }
+        $params = ['ids' => $hash, 'uploadLimit' => $speed, 'uploadLimited' => true];
+        return $this->request('torrent-set', $params);
+    }
+
+    public function setTorrentDownloadSpeed(string $hash, int $speed): bool|string|null
+    {
+        if (!is_array($hash)) {
+            $hash = [$hash];
+        }
+        $params = ['ids' => $hash, 'downloadLimit' => $speed, 'downloadLimited' => true];
+        return $this->request('torrent-set', $params);
+    }
+    
+
     /**
      * @param string $method
      * @param array $arguments

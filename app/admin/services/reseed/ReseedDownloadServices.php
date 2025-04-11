@@ -210,6 +210,33 @@ class ReseedDownloadServices
         }
     }
 
+        /**
+     * 读取站点限速配置文件
+     * @return array
+     */
+    private static function readSpeedLimitFile(): array
+    {
+        $filename = getcwd() . DIRECTORY_SEPARATOR . 'speed_limit.json';
+        
+        // 检查文件是否存在
+        if (!file_exists($filename)) {
+            return [];
+        }
+
+        // 读取文件内容
+        $jsonData = file_get_contents($filename);
+
+        // 解析JSON
+        $dataArray = json_decode($jsonData, true);
+
+        // 检查JSON是否成功解析
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [];
+        }
+
+        return $dataArray;
+    }
+
     /**
      * 把种子发送给下载器之后，做一些操作
      * @param mixed $result
@@ -220,6 +247,15 @@ class ReseedDownloadServices
      */
     private static function sendAfter(mixed $result, Clients $bittorrentClients, Client $clientModel, Reseed $reseed): void
     {
+
+        $speedLimitData = self::readSpeedLimitFile();
+        // 获取站点限速配置
+        $speedLimit = $speedLimitData[$reseed->sid] ?? null;
+        if ($speedLimit) {
+            $uplimit = $speedLimit['uplimit'];
+            $downlimit = $speedLimit['downlimit'];
+        }
+
         try {
             $reseedPayload = $reseed->getReseedPayload();
             $markerEnum = $reseedPayload->getMarkerEnum();
@@ -231,6 +267,15 @@ class ReseedDownloadServices
                             try {
                                 sleep(5);
                                 /** @var \Iyuu\BittorrentClient\Driver\qBittorrent\Client $bittorrentClients */
+                                
+                                if ($uplimit > 0) {
+                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit * 1024);
+                                }
+
+                                if ($downlimit > 0) {
+                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit * 1024);
+                                }
+                                
                                 // 标记标签 2024年4月25日
                                 if (DownloaderMarkerEnums::Tag === $markerEnum) {
                                     $bittorrentClients->torrentAddTags($reseed->info_hash, 'IYUU' . ReseedSubtypeEnums::text($reseed->getSubtypeEnums()));
@@ -242,10 +287,34 @@ class ReseedDownloadServices
                                 }
                                 $retry = 0;
                             } catch (Throwable $throwable) {
-                                Log::debug('自动辅种 标记标签和校验指令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
+                                Log::debug('自动辅种 qBittorrent单种限速、标记标签和校验指令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
                             }
                         } while (0 < $retry--);
                     }
+                    break;
+                case ClientEnums::transmission:
+                    if (is_string($result) && str_contains(strtolower($result), 'success')) {
+
+                        $retry = 5;
+                        do {
+                            try {
+                                sleep(5);
+                                /** @var \Iyuu\BittorrentClient\Driver\transmission\Client $bittorrentClients */
+
+                                if ($uplimit > 0) {
+                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit * 1024);
+                                }
+
+                                if ($downlimit > 0) {
+                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit * 1024);
+                                }
+                                $retry = 0;
+                            } catch (Throwable $throwable) {
+                                Log::debug('自动辅种 Transmission单种限速命令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
+                            }
+                        } while (0 < $retry--);
+                    }
+                    
                     break;
                 default:
                     break;

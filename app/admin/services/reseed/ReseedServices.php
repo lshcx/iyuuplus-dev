@@ -111,6 +111,9 @@ class ReseedServices
         check_iyuu_token($this->token);
         $this->parseCrontab($crontab_id);
         $this->notifyData = new NotifyData(Site::count(), count($this->crontabSites));
+        
+        // 在构造函数末尾添加：生成站点限速配置文件
+        $this->generateSpeedLimitFile();
     }
 
     /**
@@ -433,5 +436,39 @@ class ReseedServices
         $this->notifyEnum = NotifyChannelEnums::tryFrom($notify_channel);
         $this->downloaderMarkerEnums = $marker;
         $this->auto_check = $auto_check;
+    }
+
+    /**
+     * 生成站点限速配置文件
+     * @return void
+     */
+    private function generateSpeedLimitFile(): void
+    {
+        $filename = getcwd() . DIRECTORY_SEPARATOR . 'speed_limit.json';
+        
+        // 检查文件是否已存在
+        if (file_exists($filename)) {
+            return;
+        }
+        
+        $data = [];
+        
+        // 遍历站点ID从1到124
+        for ($sid = 1; $sid <= 124; $sid++) {
+            $siteModel = $this->getSiteModel($sid);
+            
+            // 如果站点模型存在，添加到数据数组
+            if ($siteModel) {
+                $data[$sid] = [
+                    'site' => $siteModel->site,
+                    'nickname' => $siteModel->nickname,
+                    'uplimit' => 0,
+                    'downlimit' => 0,
+                ];
+            }
+        }
+        
+        // 将数据写入JSON文件
+        file_put_contents($filename, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 }
