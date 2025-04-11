@@ -210,7 +210,7 @@ class ReseedDownloadServices
         }
     }
 
-        /**
+    /**
      * 读取站点限速配置文件
      * @return array
      */
@@ -222,6 +222,8 @@ class ReseedDownloadServices
         if (!file_exists($filename)) {
             return [];
         }
+
+        echo "读取站点限速配置文件路径: {$filename}" . PHP_EOL;
 
         // 读取文件内容
         $jsonData = file_get_contents($filename);
@@ -249,8 +251,11 @@ class ReseedDownloadServices
     {
 
         $speedLimitData = self::readSpeedLimitFile();
+        
         // 获取站点限速配置
         $speedLimit = $speedLimitData[$reseed->sid] ?? null;
+        $uplimit = 0;
+        $downlimit = 0;
         if ($speedLimit) {
             $uplimit = $speedLimit['uplimit'];
             $downlimit = $speedLimit['downlimit'];

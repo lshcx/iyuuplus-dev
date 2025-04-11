@@ -112,7 +112,7 @@ class ReseedServices
         $this->parseCrontab($crontab_id);
         $this->notifyData = new NotifyData(Site::count(), count($this->crontabSites));
         
-        // 在构造函数末尾添加：生成站点限速配置文件
+        // 生成站点限速配置文件
         $this->generateSpeedLimitFile();
     }
 
@@ -446,16 +446,21 @@ class ReseedServices
     {
         $filename = getcwd() . DIRECTORY_SEPARATOR . 'speed_limit.json';
         
+        echo "站点限速配置文件路径: {$filename}" . PHP_EOL;
+        
         // 检查文件是否已存在
         if (file_exists($filename)) {
+            echo "站点限速配置文件已存在" . PHP_EOL;
             return;
         }
+
+        echo "开始生成站点限速配置文件" . PHP_EOL;
         
         $data = [];
         
         // 遍历站点ID从1到124
         for ($sid = 1; $sid <= 124; $sid++) {
-            $siteModel = $this->getSiteModel($sid);
+            $siteModel = $this->getSiteModel($sid) ?? null;
             
             // 如果站点模型存在，添加到数据数组
             if ($siteModel) {
