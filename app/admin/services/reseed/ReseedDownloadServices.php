@@ -309,11 +309,11 @@ class ReseedDownloadServices
                                 /** @var \Iyuu\BittorrentClient\Driver\transmission\Client $bittorrentClients */
 
                                 if ($uplimit > 0) {
-                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit * 1024);
+                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit);
                                 }
 
                                 if ($downlimit > 0) {
-                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit * 1024);
+                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit);
                                 }
                                 $retry = 0;
                             } catch (Throwable $throwable) {
