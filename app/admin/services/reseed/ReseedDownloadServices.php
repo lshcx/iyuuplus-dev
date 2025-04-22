@@ -260,6 +260,26 @@ class ReseedDownloadServices
             $uplimit = $speedLimit['uplimit'];
             $downlimit = $speedLimit['downlimit'];
         }
+        Log::debug('站点限速配置: ' . $uplimit . ' ' . $downlimit);
+
+        if (is_string($result) && (str_contains(strtolower($result), 'ok') || str_contains(strtolower($result), 'success'))) {
+            $retry = 5;
+            do {
+                try {
+                    sleep(5);
+                    if ($uplimit > 0) {
+                        $bittorrentClients->setUploadSpeedLimit($reseed->info_hash, $uplimit);
+                    }
+
+                    if ($downlimit > 0) {
+                        $bittorrentClients->setDownloadSpeedLimit($reseed->info_hash, $downlimit);
+                    }
+                    $retry = 0;
+                } catch (Throwable $throwable) {
+                    Log::debug('自动辅种 限速命令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
+                }
+            } while (0 < $retry--);
+        }
 
         try {
             $reseedPayload = $reseed->getReseedPayload();
@@ -272,21 +292,12 @@ class ReseedDownloadServices
                             try {
                                 sleep(5);
                                 /** @var \Iyuu\BittorrentClient\Driver\qBittorrent\Client $bittorrentClients */
-                                
-                                if ($uplimit > 0) {
-                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit * 1024);
-                                }
-
-                                if ($downlimit > 0) {
-                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit * 1024);
-                                }
-                                
-                                $bittorrentClients->torrentAddTags($reseed->info_hash, $reseed->site);
-
                                 // 标记标签 2024年4月25日
                                 if (DownloaderMarkerEnums::Tag === $markerEnum) {
                                     $bittorrentClients->torrentAddTags($reseed->info_hash, 'IYUU' . ReseedSubtypeEnums::text($reseed->getSubtypeEnums()));
                                 }
+
+                                $bittorrentClients->torrentAddTags($reseed->info_hash, $reseed->site);
 
                                 // 发送校验命令
                                 if ($reseedPayload->isAutoCheck()) {
@@ -294,34 +305,10 @@ class ReseedDownloadServices
                                 }
                                 $retry = 0;
                             } catch (Throwable $throwable) {
-                                Log::debug('自动辅种 qBittorrent单种限速、标记标签和校验指令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
+                                Log::debug('自动辅种 标记标签和校验指令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
                             }
                         } while (0 < $retry--);
                     }
-                    break;
-                case ClientEnums::transmission:
-                    if (is_string($result) && str_contains(strtolower($result), 'success')) {
-
-                        $retry = 5;
-                        do {
-                            try {
-                                sleep(5);
-                                /** @var \Iyuu\BittorrentClient\Driver\transmission\Client $bittorrentClients */
-
-                                if ($uplimit > 0) {
-                                    $bittorrentClients->setTorrentUploadSpeed($reseed->info_hash, $uplimit);
-                                }
-
-                                if ($downlimit > 0) {
-                                    $bittorrentClients->setTorrentDownloadSpeed($reseed->info_hash, $downlimit);
-                                }
-                                $retry = 0;
-                            } catch (Throwable $throwable) {
-                                Log::debug('自动辅种 Transmission单种限速命令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
-                            }
-                        } while (0 < $retry--);
-                    }
-                    
                     break;
                 default:
                     break;

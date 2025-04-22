@@ -263,6 +263,30 @@ class TransferServices
      */
     private function sendAfter(TorrentContract $contractsTorrent, Clients $fromBittorrentClient, Clients $toBittorrentClient, TransferRocket $rocket, mixed $result): void
     {
+
+        $uploadSpeedLimit = $fromBittorrentClient->getUploadSpeedLimit($rocket->infohash);
+        $downloadSpeedLimit = $fromBittorrentClient->getDownloadSpeedLimit($rocket->infohash);
+        Log::debug('转移种子限速配置: ' . $uploadSpeedLimit . ' ' . $downloadSpeedLimit);
+
+        if (is_string($result) && (str_contains(strtolower($result), 'ok') || str_contains(strtolower($result), 'success'))) {
+            $retry = 5;
+            do {
+                try {
+                    sleep(5);
+                    if ($uploadSpeedLimit > 0) {
+                        $toBittorrentClient->setUploadSpeedLimit($rocket->infohash, $uploadSpeedLimit);
+                    }
+
+                    if ($downloadSpeedLimit > 0) {
+                        $toBittorrentClient->setDownloadSpeedLimit($rocket->infohash, $downloadSpeedLimit);
+                    }
+                    $retry = 0;
+                } catch (Throwable $throwable) {
+                    Log::debug('自动转移 qBittorrent单种限速命令 发送失败，正在重试 | 递减值' . $retry . ' | ' . $throwable->getMessage());
+                }
+            } while (0 < $retry--);
+        }
+
         try {
             switch ($this->to_client->getClientEnums()) {
                 case ClientEnums::qBittorrent:

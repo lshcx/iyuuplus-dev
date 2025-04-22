@@ -767,16 +767,63 @@ class Client extends Clients
         return $rs;
     }
 
-    public function setTorrentUploadSpeed($hash, $speed): false|string|null
+    /**
+     * 设置种子上传速度限制
+     * @param string $hash 种子哈希值
+     * @param int $speed 上传速度限制(字节/秒)，设置为0表示无限制
+     * @return false|string|null 请求结果
+     * @throws ServerErrorException 服务器错误时抛出异常
+     */
+    public function setUploadSpeedLimit($hash, $speed): false|string|null
     {
+        $speed = $speed * 1024;
         return $this->postData('torrent_setUploadLimit', ['hashes' => $hash, 'limit' => $speed]);
     }
 
-    public function setTorrentDownloadSpeed($hash, $speed): false|string|null
+    /**
+     * 设置种子下载速度限制
+     * @param string $hash 种子哈希值
+     * @param int $speed 下载速度限制(字节/秒)，设置为0表示无限制
+     * @return false|string|null 请求结果
+     * @throws ServerErrorException 服务器错误时抛出异常
+     */
+    public function setDownloadSpeedLimit($hash, $speed): false|string|null
     {
+        $speed = $speed * 1024;
         return $this->postData('torrent_setDownloadLimit', ['hashes' => $hash, 'limit' => $speed]);
     }
-    
+
+    /**
+     * 获取种子上传速度限制
+     * @param string $hash 种子哈希值
+     * @return int 上传速度限制(字节/秒)，如果没有限制返回0
+     * @throws ServerErrorException
+     */
+    public function getUploadSpeedLimit($hash): int
+    {
+        $response = $this->postData('torrent_uploadLimit', ['hashes' => $hash]);
+        if ($response) {
+            $data = json_decode($response, true);
+            return $data[$hash] / 1024 ?? 0;
+        }
+        return 0;
+    }
+
+    /**
+     * 获取种子下载速度限制
+     * @param string $hash 种子哈希值
+     * @return int 下载速度限制(字节/秒)，如果没有限制返回0
+     * @throws ServerErrorException
+     */
+    public function getDownloadSpeedLimit($hash): int
+    {
+        $response = $this->postData('torrent_downloadLimit', ['hashes' => $hash]);
+        if ($response) {
+            $data = json_decode($response, true);
+            return $data[$hash] / 1024 ?? 0;
+        }
+        return 0;
+    }
 
     public function start()
     {

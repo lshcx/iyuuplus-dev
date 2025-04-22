@@ -292,7 +292,15 @@ class Client extends Clients
         return $this->request('torrent-verify', $params);
     }
 
-    public function setTorrentUploadSpeed(string $hash, int $speed): bool|string|null
+    /**
+     * 设置种子上传速度限制
+     * @param string|array $hash 种子哈希值或哈希值数组
+     * @param int $speed 上传速度限制(KB/秒)，设置为0表示无限制
+     * @return bool|string|null 请求结果
+     * @throws UnauthorizedException 未授权异常
+     * @throws ServerErrorException 服务器错误时抛出异常
+     */
+    public function setUploadSpeedLimit(string $hash, int $speed): bool|string|null
     {
         if (!is_array($hash)) {
             $hash = [$hash];
@@ -301,7 +309,15 @@ class Client extends Clients
         return $this->request('torrent-set', $params);
     }
 
-    public function setTorrentDownloadSpeed(string $hash, int $speed): bool|string|null
+    /**
+     * 设置种子下载速度限制
+     * @param string|array $hash 种子哈希值或哈希值数组
+     * @param int $speed 下载速度限制(KB/秒)，设置为0表示无限制
+     * @return bool|string|null 请求结果
+     * @throws UnauthorizedException 未授权异常
+     * @throws ServerErrorException 服务器错误时抛出异常
+     */
+    public function setDownloadSpeedLimit(string $hash, int $speed): bool|string|null
     {
         if (!is_array($hash)) {
             $hash = [$hash];
@@ -309,7 +325,54 @@ class Client extends Clients
         $params = ['ids' => $hash, 'downloadLimit' => $speed, 'downloadLimited' => true];
         return $this->request('torrent-set', $params);
     }
-    
+
+    /**
+     * 获取种子上传速度限制
+     * @param string $hash 种子哈希值
+     * @return int 上传速度限制(KB/秒)，如果没有限制返回0
+     * @throws UnauthorizedException|ServerErrorException
+     */
+    public function getUploadSpeedLimit(string $hash): int
+    {
+        $response = $this->get([$hash], ['uploadLimit', 'uploadLimited']);
+        if ($response) {
+            $data = json_decode($response, true);
+            if (isset($data['result']) && $data['result'] === 'success' && 
+                !empty($data['arguments']['torrents'])) {
+                $torrent = $data['arguments']['torrents'][0];
+                // 只有在uploadLimited为true时速度限制才生效
+                if (isset($torrent['uploadLimited']) && $torrent['uploadLimited'] && 
+                    isset($torrent['uploadLimit'])) {
+                    return (int)$torrent['uploadLimit'];
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 获取种子下载速度限制
+     * @param string $hash 种子哈希值
+     * @return int 下载速度限制(KB/秒)，如果没有限制返回0
+     * @throws UnauthorizedException|ServerErrorException
+     */
+    public function getDownloadSpeedLimit(string $hash): int
+    {
+        $response = $this->get([$hash], ['downloadLimit', 'downloadLimited']);
+        if ($response) {
+            $data = json_decode($response, true);
+            if (isset($data['result']) && $data['result'] === 'success' && 
+                !empty($data['arguments']['torrents'])) {
+                $torrent = $data['arguments']['torrents'][0];
+                // 只有在downloadLimited为true时速度限制才生效
+                if (isset($torrent['downloadLimited']) && $torrent['downloadLimited'] && 
+                    isset($torrent['downloadLimit'])) {
+                    return (int)$torrent['downloadLimit'];
+                }
+            }
+        }
+        return 0;
+    }
 
     /**
      * @param string $method
